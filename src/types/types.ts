@@ -1,14 +1,19 @@
 export interface Template {
 	id: string;
 	name: string;
-	behavior: 'create' | 'append-specific' | 'append-daily' | 'prepend-specific' | 'prepend-daily' | 'overwrite';
+	behavior: 'create' | 'append-specific' | 'prepend-specific' | 'overwrite';
 	noteNameFormat: string;
 	path: string;
 	noteContentFormat: string;
 	properties: Property[];
 	triggers?: string[];
-	vault?: string;
+	folder?: string;  // folder name (replaces vault)
 	context?: string;
+}
+
+export interface FolderConfig {
+	name: string;      // Display name for the folder
+	path: string;      // Human-readable path for display
 }
 
 export interface Property {
@@ -50,7 +55,7 @@ export interface Rating {
 	date: string;
 }
 
-export type SaveBehavior = 'addToObsidian' | 'saveFile' | 'copyToClipboard';
+export type SaveBehavior = 'save' | 'saveFile' | 'copyToClipboard';
 
 export interface ReaderSettings {
 	fontSize: number;
@@ -61,11 +66,10 @@ export interface ReaderSettings {
 }
 
 export interface Settings {
-	vaults: string[];
+	folders: FolderConfig[];  // replaces vaults
+	defaultFolder?: string;   // name of default folder
 	showMoreActionsButton: boolean;
 	betaFeatures: boolean;
-	legacyMode: boolean;
-	silentOpen: boolean;
 	openBehavior: 'popup' | 'embedded';
 	highlighterEnabled: boolean;
 	alwaysShowHighlights: boolean;
@@ -79,14 +83,14 @@ export interface Settings {
 	propertyTypes: PropertyType[];
 	readerSettings: ReaderSettings;
 	stats: {
-		addToObsidian: number;
+		save: number;
 		saveFile: number;
 		copyToClipboard: number;
 		share: number;
 	};
 	history: HistoryEntry[];
 	ratings: Rating[];
-	saveBehavior: 'addToObsidian' | 'saveFile' | 'copyToClipboard';
+	saveBehavior: 'save' | 'saveFile' | 'copyToClipboard';
 }
 
 export interface ModelConfig {
@@ -100,9 +104,9 @@ export interface ModelConfig {
 export interface HistoryEntry {
 	datetime: string;
 	url: string;
-	action: 'addToObsidian' | 'saveFile' | 'copyToClipboard' | 'share';
+	action: 'save' | 'saveFile' | 'copyToClipboard' | 'share';
 	title?: string;
-	vault?: string;
+	folder?: string;
 	path?: string;
 }
 

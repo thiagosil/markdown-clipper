@@ -30,8 +30,6 @@ export async function exportTemplate(): Promise<void> {
 	const sanitizedName = sanitizeFileName(template.name);
 	const fileName = `${sanitizedName.replace(/\s+/g, '-').toLowerCase()}-clipper.json`;
 
-	const isDailyNote = template.behavior === 'append-daily' || template.behavior === 'prepend-daily';
-
 	const orderedTemplate: Partial<Template> & { schemaVersion: string } = {
 		schemaVersion: SCHEMA_VERSION,
 		name: template.name,
@@ -43,13 +41,9 @@ export async function exportTemplate(): Promise<void> {
 			type: type || generalSettings.propertyTypes.find(pt => pt.name === name)?.type || 'text'
 		})),
 		triggers: template.triggers,
+		noteNameFormat: template.noteNameFormat,
+		path: template.path,
 	};
-
-	// Only include noteNameFormat and path for non-daily note behaviors
-	if (!isDailyNote) {
-		orderedTemplate.noteNameFormat = template.noteNameFormat;
-		orderedTemplate.path = template.path;
-	}
 
 	// Include context only if it has a value
 	if (template.context) {
@@ -150,19 +144,17 @@ export function importTemplate(input?: HTMLInputElement): void {
 function validateImportedTemplate(template: Partial<Template>): boolean {
 	const requiredFields: (keyof Template)[] = ['name', 'behavior', 'properties', 'noteContentFormat'];
 	const validTypes = ['text', 'multitext', 'number', 'checkbox', 'date', 'datetime'];
-	
-	const isDailyNote = template.behavior === 'append-daily' || template.behavior === 'prepend-daily';
 
 	const hasRequiredFields = requiredFields.every(field => template.hasOwnProperty(field));
 	const hasValidProperties = Array.isArray(template.properties) &&
-		template.properties!.every((prop: any) => 
-			prop.hasOwnProperty('name') && 
-			prop.hasOwnProperty('value') && 
+		template.properties!.every((prop: any) =>
+			prop.hasOwnProperty('name') &&
+			prop.hasOwnProperty('value') &&
 			(!prop.hasOwnProperty('type') || validTypes.includes(prop.type))
 		);
 
-	// Check for noteNameFormat and path only if it's not a daily note template
-	const hasValidNoteNameAndPath = isDailyNote || (template.hasOwnProperty('noteNameFormat') && template.hasOwnProperty('path'));
+	// Check for noteNameFormat and path
+	const hasValidNoteNameAndPath = template.hasOwnProperty('noteNameFormat') && template.hasOwnProperty('path');
 
 	// Add optional check for context
 	const hasValidContext = !template.context || typeof template.context === 'string';
@@ -284,8 +276,6 @@ async function importTemplateFromJson(jsonContent: string): Promise<void> {
 }
 
 export function copyTemplateToClipboard(template: Template): void {
-	const isDailyNote = template.behavior === 'append-daily' || template.behavior === 'prepend-daily';
-
 	const orderedTemplate: Partial<Template> & { schemaVersion: string } = {
 		schemaVersion: SCHEMA_VERSION,
 		name: template.name,
@@ -297,13 +287,9 @@ export function copyTemplateToClipboard(template: Template): void {
 			type: type || generalSettings.propertyTypes.find(pt => pt.name === name)?.type || 'text'
 		})),
 		triggers: template.triggers,
+		noteNameFormat: template.noteNameFormat,
+		path: template.path,
 	};
-
-	// Only include noteNameFormat and path for non-daily note behaviors
-	if (!isDailyNote) {
-		orderedTemplate.noteNameFormat = template.noteNameFormat;
-		orderedTemplate.path = template.path;
-	}
 
 	// Include context only if it has a value
 	if (template.context) {

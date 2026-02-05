@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { Template, Property, PromptVariable } from '../types/types';
 import { incrementStat, addHistoryEntry, getClipHistory } from '../utils/storage-utils';
-import { generateFrontmatter, saveToObsidian } from '../utils/obsidian-note-creator';
+import { generateFrontmatter, saveMarkdown, getFolderHandle, selectFolder, storeFolderHandle, verifyFolderAccess } from '../utils/folder-file-saver';
 import { extractPageContent, initializePageContent } from '../utils/content-extractor';
 import { compileTemplate } from '../utils/template-compiler';
 import { initializeIcons, getPropertyTypeIcon } from '../icons/icons';
@@ -33,7 +33,7 @@ let currentTemplate: Template | null = null;
 let templates: Template[] = [];
 let currentVariables: { [key: string]: string } = {};
 let currentTabId: number | undefined;
-let lastSelectedVault: string | null = null;
+let lastSelectedFolder: string | null = null;
 
 const isSidePanel = window.location.pathname.includes('side-panel.html');
 const urlParams = new URLSearchParams(window.location.search);
@@ -170,14 +170,14 @@ async function initializeExtension(tabId: number) {
 		currentTemplate = templates[0];
 		debugLog('Templates', 'Current template set to:', currentTemplate);
 
-		// Load last selected vault
-		lastSelectedVault = await getLocalStorage('lastSelectedVault');
-		if (!lastSelectedVault && loadedSettings.vaults.length > 0) {
-			lastSelectedVault = loadedSettings.vaults[0];
+		// Load last selected folder
+		lastSelectedFolder = await getLocalStorage('lastSelectedFolder');
+		if (!lastSelectedFolder && loadedSettings.folders.length > 0) {
+			lastSelectedFolder = loadedSettings.folders[0].name;
 		}
-		debugLog('Vaults', 'Last selected vault:', lastSelectedVault);
+		debugLog('Folders', 'Last selected folder:', lastSelectedFolder);
 
-		updateVaultDropdown(loadedSettings.vaults);
+		updateFolderDropdown(loadedSettings.folders);
 
 		const tab = await getTabInfo(tabId);
 		if (!tab.url || isBlankPage(tab.url)) {
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 			try {
 				// DOM-dependent initializations
-				updateVaultDropdown(loadedSettings.vaults);
+				updateFolderDropdown(loadedSettings.folders);
 				populateTemplateDropdown();
 				setupEventListeners(currentTabId);
 				await initializeUI();
@@ -470,14 +470,14 @@ function setupEventListeners(tabId: number) {
 
 						if (navigator.canShare(shareData)) {
 							const pathField = document.getElementById('path-name-field') as HTMLInputElement;
-							const vaultDropdown = document.getElementById('vault-select') as HTMLSelectElement;
+							const folderDropdown = document.getElementById('folder-select') as HTMLSelectElement;
 							const path = pathField?.value || '';
-							const vault = vaultDropdown?.value || '';
+							const folder = folderDropdown?.value || '';
 
 							navigator.share(shareData)
 								.then(async () => {
 									const tabInfo = await getCurrentTabInfo();
-									await incrementStat('share', vault, path, tabInfo.url, tabInfo.title);
+									await incrementStat('share', folder, path, tabInfo.url, tabInfo.title);
 									const moreDropdown = document.getElementById('more-dropdown');
 									if (moreDropdown) {
 											moreDropdown.classList.remove('show');
@@ -717,13 +717,13 @@ async function initializeTemplateFields(currentTabId: number, template: Template
 	// Cache the current URL once at the start to avoid repeated getTabInfo calls
 	const currentUrl = currentTabId ? (await getTabInfo(currentTabId)).url || '' : '';
 
-	// Handle vault selection
-	const vaultDropdown = document.getElementById('vault-select') as HTMLSelectElement;
-	if (vaultDropdown) {
-		if (template.vault) {
-			vaultDropdown.value = template.vault;
-		} else if (lastSelectedVault) {
-			vaultDropdown.value = lastSelectedVault;
+	// Handle folder selection
+	const folderDropdown = document.getElementById('folder-select') as HTMLSelectElement;
+	if (folderDropdown) {
+		if (template.folder) {
+			folderDropdown.value = template.folder;
+		} else if (lastSelectedFolder) {
+			folderDropdown.value = lastSelectedFolder;
 		}
 	}
 
@@ -860,15 +860,9 @@ async function initializeTemplateFields(currentTabId: number, template: Template
 	const pathContainer = document.querySelector('.vault-path-container') as HTMLElement;
 
 	if (pathField && pathContainer) {
-		const isDailyNote = template.behavior === 'append-daily' || template.behavior === 'prepend-daily';
-
-		if (isDailyNote) {
-			pathField.style.display = 'none';
-		} else {
-			pathContainer.style.display = 'flex';
-			pathField.value = formattedPath;
-			pathField.setAttribute('data-template-value', template.path);
-		}
+		pathContainer.style.display = 'flex';
+		pathField.value = formattedPath;
+		pathField.setAttribute('data-template-value', template.path);
 	}
 
 	const noteContentField = document.getElementById('note-content-field') as HTMLTextAreaElement;
@@ -995,38 +989,39 @@ async function getReplacedTemplate(template: Template, variables: { [key: string
 	return replacedTemplate;
 }
 
-function updateVaultDropdown(vaults: string[]) {
-	const vaultDropdown = document.getElementById('vault-select') as HTMLSelectElement | null;
-	const vaultContainer = document.getElementById('vault-container');
+function updateFolderDropdown(folders: { name: string; path: string }[]) {
+	const folderDropdown = document.getElementById('folder-select') as HTMLSelectElement | null;
+	const folderContainer = document.getElementById('folder-container');
 
-	if (!vaultDropdown || !vaultContainer) return;
+	if (!folderDropdown || !folderContainer) return;
 
 	// Clear existing options
-	vaultDropdown.textContent = '';
-	
-	vaults.forEach(vault => {
+	folderDropdown.textContent = '';
+
+	folders.forEach(folder => {
 		const option = document.createElement('option');
-		option.value = vault;
-		option.textContent = vault;
-		vaultDropdown.appendChild(option);
+		option.value = folder.name;
+		option.textContent = folder.name;
+		folderDropdown.appendChild(option);
 	});
 
-	// Only show vault selector if vaults are defined
-	if (vaults.length > 0) {
-		vaultContainer.style.display = 'block';
-		if (lastSelectedVault && vaults.includes(lastSelectedVault)) {
-			vaultDropdown.value = lastSelectedVault;
+	// Only show folder selector if folders are defined
+	if (folders.length > 0) {
+		folderContainer.style.display = 'block';
+		const folderNames = folders.map(f => f.name);
+		if (lastSelectedFolder && folderNames.includes(lastSelectedFolder)) {
+			folderDropdown.value = lastSelectedFolder;
 		} else {
-			vaultDropdown.value = vaults[0];
+			folderDropdown.value = folders[0].name;
 		}
 	} else {
-		vaultContainer.style.display = 'none';
+		folderContainer.style.display = 'none';
 	}
 
-	// Add event listener to update lastSelectedVault when changed
-	vaultDropdown.addEventListener('change', () => {
-		lastSelectedVault = vaultDropdown.value;
-		setLocalStorage('lastSelectedVault', lastSelectedVault);
+	// Add event listener to update lastSelectedFolder when changed
+	folderDropdown.addEventListener('change', () => {
+		lastSelectedFolder = folderDropdown.value;
+		setLocalStorage('lastSelectedFolder', lastSelectedFolder);
 	});
 }
 
@@ -1129,14 +1124,14 @@ export async function copyToClipboard(content: string) {
 			action: 'copy-to-clipboard',
 			text: content
 		});
-		
+
 		const pathField = document.getElementById('path-name-field') as HTMLInputElement;
-		const vaultDropdown = document.getElementById('vault-select') as HTMLSelectElement;
+		const folderDropdown = document.getElementById('folder-select') as HTMLSelectElement;
 		const path = pathField?.value || '';
-		const vault = vaultDropdown?.value || '';
-		
+		const folder = folderDropdown?.value || '';
+
 		const tabInfo = await getCurrentTabInfo();
-		await incrementStat('copyToClipboard', vault, path, tabInfo.url, tabInfo.title);
+		await incrementStat('copyToClipboard', folder, path, tabInfo.url, tabInfo.title);
 
 		// Change the main button text temporarily
 		const clipButton = document.getElementById('clip-btn');
@@ -1159,11 +1154,11 @@ async function handleSaveToDownloads() {
 	try {
 		const noteNameField = document.getElementById('note-name-field') as HTMLInputElement;
 		const pathField = document.getElementById('path-name-field') as HTMLInputElement;
-		const vaultDropdown = document.getElementById('vault-select') as HTMLSelectElement;
-		
+		const folderDropdown = document.getElementById('folder-select') as HTMLSelectElement;
+
 		let fileName = noteNameField?.value || 'untitled';
 		const path = pathField?.value || '';
-		const vault = vaultDropdown?.value || '';
+		const folder = folderDropdown?.value || '';
 		
 		const properties = Array.from(document.querySelectorAll('.metadata-property input')).map(input => {
 			const inputElement = input as HTMLInputElement;
@@ -1187,7 +1182,7 @@ async function handleSaveToDownloads() {
 		});
 
 		const tabInfo = await getCurrentTabInfo();
-		await incrementStat('saveFile', vault, path, tabInfo.url, tabInfo.title);
+		await incrementStat('saveFile', folder, path, tabInfo.url, tabInfo.title);
 
 		const moreDropdown = document.getElementById('more-dropdown');
 		if (moreDropdown) {
@@ -1214,36 +1209,43 @@ function determineMainAction() {
 			mainButton.textContent = getMessage('copyToClipboard');
 			mainButton.onclick = () => copyContent();
 			// Add direct actions to secondary
-			addSecondaryAction(secondaryActions, 'addToObsidian', () => handleClipObsidian());
+			addSecondaryAction(secondaryActions, 'save', () => handleSaveMarkdown());
 			addSecondaryAction(secondaryActions, 'saveFile', handleSaveToDownloads);
 			break;
 		case 'saveFile':
 			mainButton.textContent = getMessage('saveFile');
 			mainButton.onclick = () => handleSaveToDownloads();
 			// Add direct actions to secondary
-			addSecondaryAction(secondaryActions, 'addToObsidian', () => handleClipObsidian());
+			addSecondaryAction(secondaryActions, 'save', () => handleSaveMarkdown());
 			addSecondaryAction(secondaryActions, 'copyToClipboard', copyContent);
 			break;
-		default: // 'addToObsidian'
+		default: // 'save'
 			mainButton.textContent = getMessage('addToObsidian');
-			mainButton.onclick = () => handleClipObsidian();
+			mainButton.onclick = () => handleSaveMarkdown();
 			// Add direct actions to secondary
 			addSecondaryAction(secondaryActions, 'copyToClipboard', copyContent);
 			addSecondaryAction(secondaryActions, 'saveFile', handleSaveToDownloads);
 	}
 }
 
-async function handleClipObsidian(): Promise<void> {
+async function handleSaveMarkdown(): Promise<void> {
 	if (!currentTemplate) return;
 
-	const vaultDropdown = document.getElementById('vault-select') as HTMLSelectElement;
+	const folderDropdown = document.getElementById('folder-select') as HTMLSelectElement;
 	const noteContentField = document.getElementById('note-content-field') as HTMLTextAreaElement;
 	const noteNameField = document.getElementById('note-name-field') as HTMLInputElement;
 	const pathField = document.getElementById('path-name-field') as HTMLInputElement;
 	const interpretBtn = document.getElementById('interpret-btn') as HTMLButtonElement;
 
-	if (!vaultDropdown || !noteContentField) {
+	if (!noteContentField) {
 		showError('Some required fields are missing. Please try reloading the extension.');
+		return;
+	}
+
+	// Check if we have a folder configured
+	const selectedFolder = currentTemplate.folder || folderDropdown?.value;
+	if (!selectedFolder && loadedSettings.folders.length === 0) {
+		showError('noFolderConfigured');
 		return;
 	}
 
@@ -1271,29 +1273,49 @@ async function handleClipObsidian(): Promise<void> {
 		const frontmatter = await generateFrontmatter(properties);
 		const fileContent = frontmatter + noteContentField.value;
 
-		// Save to Obsidian
-		const selectedVault = currentTemplate.vault || vaultDropdown.value;
-		const isDailyNote = currentTemplate.behavior === 'append-daily' || currentTemplate.behavior === 'prepend-daily';
-		const noteName = isDailyNote ? '' : noteNameField?.value || '';
-		const path = isDailyNote ? '' : pathField?.value || '';
+		// Save to folder
+		const folderName = selectedFolder || loadedSettings.folders[0]?.name;
+		const noteName = noteNameField?.value || 'untitled';
+		const path = pathField?.value || '';
 
-		await saveToObsidian(fileContent, noteName, path, selectedVault, currentTemplate.behavior);
+		await saveMarkdown(fileContent, noteName, path, folderName);
 		const tabInfo = await getCurrentTabInfo();
-		await incrementStat('addToObsidian', selectedVault, path, tabInfo.url, tabInfo.title);
+		await incrementStat('save', folderName, path, tabInfo.url, tabInfo.title);
 
-		if (!currentTemplate.vault) {
-			lastSelectedVault = selectedVault;
-			await setLocalStorage('lastSelectedVault', lastSelectedVault);
+		if (!currentTemplate.folder) {
+			lastSelectedFolder = folderName;
+			await setLocalStorage('lastSelectedFolder', lastSelectedFolder);
+		}
+
+		// Show success feedback
+		const clipButton = document.getElementById('clip-btn');
+		if (clipButton) {
+			const originalText = clipButton.textContent || getMessage('addToObsidian');
+			clipButton.textContent = getMessage('fileSaved');
+
+			// Reset the text after 1.5 seconds
+			setTimeout(() => {
+				clipButton.textContent = originalText;
+			}, 1500);
 		}
 
 		if (!isSidePanel) {
-			setTimeout(() => window.close(), 500);
+			setTimeout(() => window.close(), 1500);
 		}
 	} catch (error) {
-		console.error('Error in handleClipObsidian:', error);
-		showError('failedToSaveFile');
+		console.error('Error in handleSaveMarkdown:', error);
+		if (error instanceof Error && error.message.includes('Permission denied')) {
+			showError('folderAccessDenied');
+		} else {
+			showError('failedToSaveFile');
+		}
 		throw error;
 	}
+}
+
+// Legacy alias
+async function handleClipObsidian(): Promise<void> {
+	return handleSaveMarkdown();
 }
 
 function addSecondaryAction(container: Element, actionType: string, handler: () => void) {
@@ -1327,7 +1349,8 @@ function getActionIcon(actionType: string): string {
 	switch (actionType) {
 		case 'copyToClipboard': return 'copy';
 		case 'saveFile': return 'file-down';
-		case 'addToObsidian': return 'pen-line';
+		case 'save': return 'save';
+		case 'addToObsidian': return 'save';
 		default: return 'plus';
 	}
 }

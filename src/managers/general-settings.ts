@@ -2,7 +2,7 @@ import { handleDragStart, handleDragOver, handleDrop, handleDragEnd } from '../u
 import { initializeIcons } from '../icons/icons';
 import { getCommands } from '../utils/hotkeys';
 import { initializeToggles, updateToggleState, initializeSettingToggle } from '../utils/ui-utils';
-import { generalSettings, loadSettings, saveSettings, setLocalStorage, getLocalStorage } from '../utils/storage-utils';
+import { generalSettings, loadSettings, saveSettings, setLocalStorage, getLocalStorage, FolderConfig } from '../utils/storage-utils';
 import { detectBrowser } from '../utils/browser-detection';
 import { createElementWithClass, createElementWithHTML } from '../utils/dom-utils';
 import { createDefaultTemplate, getTemplates, saveTemplateSettings } from '../managers/template-manager';
@@ -18,6 +18,7 @@ import { getClipHistory } from '../utils/storage-utils';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import { showModal, hideModal } from '../utils/modal-utils';
+import { selectFolder, storeFolderHandle, removeFolderHandle } from '../utils/folder-file-saver';
 
 dayjs.extend(weekOfYear);
 
@@ -28,13 +29,13 @@ const STORE_URLS = {
 	edge: 'https://microsoftedge.microsoft.com/addons/detail/obsidian-web-clipper/eigdjhmgnaaeaonimdklocfekkaanfme'
 };
 
-export function updateVaultList(): void {
-	const vaultList = document.getElementById('vault-list') as HTMLUListElement;
-	if (!vaultList) return;
+export function updateFolderList(): void {
+	const folderList = document.getElementById('folder-list') as HTMLUListElement;
+	if (!folderList) return;
 
-	// Clear existing vaults
-	vaultList.textContent = '';
-	generalSettings.vaults.forEach((vault, index) => {
+	// Clear existing folders
+	folderList.textContent = '';
+	generalSettings.folders.forEach((folder, index) => {
 		const li = document.createElement('li');
 		li.dataset.index = index.toString();
 		li.draggable = true;
@@ -43,13 +44,22 @@ export function updateVaultList(): void {
 		dragHandle.appendChild(createElementWithHTML('i', '', { 'data-lucide': 'grip-vertical' }));
 		li.appendChild(dragHandle);
 
-		const span = document.createElement('span');
-		span.textContent = vault;
-		li.appendChild(span);
+		const folderInfo = createElementWithClass('div', 'folder-info');
+		const nameSpan = document.createElement('span');
+		nameSpan.className = 'folder-name';
+		nameSpan.textContent = folder.name;
+		folderInfo.appendChild(nameSpan);
+
+		const pathSpan = document.createElement('span');
+		pathSpan.className = 'folder-path';
+		pathSpan.textContent = folder.path;
+		folderInfo.appendChild(pathSpan);
+
+		li.appendChild(folderInfo);
 
 		const removeBtn = createElementWithClass('button', 'remove-vault-btn clickable-icon');
 		removeBtn.setAttribute('type', 'button');
-		removeBtn.setAttribute('aria-label', getMessage('removeVault'));
+		removeBtn.setAttribute('aria-label', getMessage('removeFolder'));
 		removeBtn.appendChild(createElementWithHTML('i', '', { 'data-lucide': 'trash-2' }));
 		li.appendChild(removeBtn);
 
@@ -59,24 +69,76 @@ export function updateVaultList(): void {
 		li.addEventListener('dragend', handleDragEnd);
 		removeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			removeVault(index);
+			removeFolder(index);
 		});
-		vaultList.appendChild(li);
+		folderList.appendChild(li);
 	});
 
-	initializeIcons(vaultList);
+	initializeIcons(folderList);
 }
 
-export function addVault(vault: string): void {
-	generalSettings.vaults.push(vault);
-	saveSettings();
-	updateVaultList();
+export async function addFolder(): Promise<void> {
+	try {
+		const result = await selectFolder();
+		if (!result) return; // User cancelled
+
+		const { handle, path } = result;
+
+		// Check if folder with same path already exists
+		const existingFolder = generalSettings.folders.find(f => f.path === path);
+		if (existingFolder) {
+			// Update existing folder handle
+			await storeFolderHandle(existingFolder.name, handle);
+			return;
+		}
+
+		// Create new folder config
+		const folderConfig: FolderConfig = {
+			name: path, // Use path as name for now
+			path: path
+		};
+
+		// Store the handle in IndexedDB
+		await storeFolderHandle(folderConfig.name, handle);
+
+		// Add to settings
+		generalSettings.folders.push(folderConfig);
+
+		// Set as default if it's the first folder
+		if (generalSettings.folders.length === 1) {
+			generalSettings.defaultFolder = folderConfig.name;
+		}
+
+		await saveSettings();
+		updateFolderList();
+	} catch (error) {
+		console.error('Error adding folder:', error);
+		alert(error instanceof Error ? error.message : 'Failed to add folder');
+	}
 }
 
-export function removeVault(index: number): void {
-	generalSettings.vaults.splice(index, 1);
-	saveSettings();
-	updateVaultList();
+export async function removeFolder(index: number): Promise<void> {
+	const folder = generalSettings.folders[index];
+	if (folder) {
+		// Remove from IndexedDB
+		await removeFolderHandle(folder.name);
+
+		// Remove from settings
+		generalSettings.folders.splice(index, 1);
+
+		// Update default folder if needed
+		if (generalSettings.defaultFolder === folder.name) {
+			generalSettings.defaultFolder = generalSettings.folders[0]?.name;
+		}
+
+		await saveSettings();
+		updateFolderList();
+	}
+}
+
+// Legacy compatibility alias
+export function updateVaultList(): void {
+	updateFolderList();
 }
 
 export async function setShortcutInstructions() {
@@ -201,7 +263,7 @@ export function initializeGeneralSettings(): void {
 							}
 						});
 						await handleRating(rating);
-						
+
 						// Hide the rating section after rating
 						if (rateExtensionSection) {
 							rateExtensionSection.style.display = 'none';
@@ -211,12 +273,10 @@ export function initializeGeneralSettings(): void {
 			}
 		}
 
-		updateVaultList();
+		updateFolderList();
 		initializeShowMoreActionsToggle();
 		initializeBetaFeaturesToggle();
-		initializeLegacyModeToggle();
-		initializeSilentOpenToggle();
-		initializeVaultInput();
+		initializeAddFolderButton();
 		initializeOpenBehaviorDropdown();
 		initializeKeyboardShortcuts();
 		initializeToggles();
@@ -251,8 +311,6 @@ function saveSettingsFromForm(): void {
 	const openBehaviorDropdown = document.getElementById('open-behavior-dropdown') as HTMLSelectElement;
 	const showMoreActionsToggle = document.getElementById('show-more-actions-toggle') as HTMLInputElement;
 	const betaFeaturesToggle = document.getElementById('beta-features-toggle') as HTMLInputElement;
-	const legacyModeToggle = document.getElementById('legacy-mode-toggle') as HTMLInputElement;
-	const silentOpenToggle = document.getElementById('silent-open-toggle') as HTMLInputElement;
 	const highlighterToggle = document.getElementById('highlighter-toggle') as HTMLInputElement;
 	const alwaysShowHighlightsToggle = document.getElementById('highlighter-visibility') as HTMLInputElement;
 	const highlightBehaviorSelect = document.getElementById('highlighter-behavior') as HTMLSelectElement;
@@ -262,8 +320,6 @@ function saveSettingsFromForm(): void {
 		openBehavior: (openBehaviorDropdown?.value as 'popup' | 'embedded') ?? generalSettings.openBehavior,
 		showMoreActionsButton: showMoreActionsToggle?.checked ?? generalSettings.showMoreActionsButton,
 		betaFeatures: betaFeaturesToggle?.checked ?? generalSettings.betaFeatures,
-		legacyMode: legacyModeToggle?.checked ?? generalSettings.legacyMode,
-		silentOpen: silentOpenToggle?.checked ?? generalSettings.silentOpen,
 		highlighterEnabled: highlighterToggle?.checked ?? generalSettings.highlighterEnabled,
 		alwaysShowHighlights: alwaysShowHighlightsToggle?.checked ?? generalSettings.alwaysShowHighlights,
 		highlightBehavior: highlightBehaviorSelect?.value ?? generalSettings.highlightBehavior
@@ -278,21 +334,6 @@ function initializeShowMoreActionsToggle(): void {
 	});
 }
 
-function initializeVaultInput(): void {
-	const vaultInput = document.getElementById('vault-input') as HTMLInputElement;
-	if (vaultInput) {
-		vaultInput.addEventListener('keypress', (e) => {
-			if (e.key === 'Enter') {
-				e.preventDefault();
-				const newVault = vaultInput.value.trim();
-				if (newVault) {
-					addVault(newVault);
-					vaultInput.value = '';
-				}
-			}
-		});
-	}
-}
 
 async function initializeKeyboardShortcuts(): Promise<void> {
 	const shortcutsList = document.getElementById('keyboard-shortcuts-list');
@@ -332,16 +373,11 @@ function initializeBetaFeaturesToggle(): void {
 	});
 }
 
-function initializeLegacyModeToggle(): void {
-	initializeSettingToggle('legacy-mode-toggle', generalSettings.legacyMode, (checked) => {
-		saveSettings({ ...generalSettings, legacyMode: checked });
-	});
-}
-
-function initializeSilentOpenToggle(): void {
-	initializeSettingToggle('silent-open-toggle', generalSettings.silentOpen, (checked) => {
-		saveSettings({ ...generalSettings, silentOpen: checked });
-	});
+function initializeAddFolderButton(): void {
+	const addFolderBtn = document.getElementById('add-folder-btn');
+	if (addFolderBtn) {
+		addFolderBtn.addEventListener('click', addFolder);
+	}
 }
 
 function initializeOpenBehaviorDropdown(): void {
@@ -367,7 +403,7 @@ function initializeSaveBehaviorDropdown(): void {
 
     dropdown.value = generalSettings.saveBehavior;
     dropdown.addEventListener('change', () => {
-        const newValue = dropdown.value as 'addToObsidian' | 'copyToClipboard' | 'saveFile';
+        const newValue = dropdown.value as 'save' | 'copyToClipboard' | 'saveFile';
         saveSettings({ saveBehavior: newValue });
     });
 }

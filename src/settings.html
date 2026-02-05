@@ -122,10 +122,10 @@
 								</div>
 							</div>
 							<div>
-								<h3 data-i18n="vaults">Vaults</h3>
-								<div class="setting-item-description" data-i18n="vaultsDescription">By default, clipped notes are saved to the currently open vault. You can add vaults here if you want the option to save to different vaults. Vault names must exactly match the name of the Obsidian vault. Press <strong>enter</strong> to add a&nbsp;vault.</div>
-								<input type="text" id="vault-input" data-i18n="addVaultPlaceholder" placeholder="Press enter to add a vault" autocomplete="off" spellcheck="false" />
-								<ul id="vault-list"></ul>
+								<h3 data-i18n="vaults">Save Folders</h3>
+								<div class="setting-item-description" data-i18n="vaultsDescription">Configure folders where clipped notes will be saved. Click <strong>Add Folder</strong> to select a folder from your file system.</div>
+								<button type="button" id="add-folder-btn" class="btn" data-i18n="addFolder">Add Folder</button>
+								<ul id="folder-list"></ul>
 							</div>
 							<div id="hotkeys-subsection">
 								<h3 data-i18n="hotkeys">Hotkeys</h3>
@@ -171,36 +171,10 @@
 									</div>
 									<div class="setting-item-control">
 										<select id="save-behavior-dropdown">
-											<option value="addToObsidian" selected data-i18n="addToObsidian">Add to Obsidian</option>
+											<option value="save" selected data-i18n="addToObsidian">Save</option>
 											<option value="copyToClipboard" data-i18n="copyToClipboard">Copy to clipboard</option>
 											<option value="saveFile" data-i18n="saveFile">Save file</option>
 										</select>
-									</div>
-								</div>
-								<div class="setting-item mod-horizontal">
-									<div class="setting-item-info">
-										<label for="silent-open-toggle" data-i18n="silentOpen">Save clipped note without opening&nbsp;it</label>
-										<div class="setting-item-description" data-i18n="silentOpenDescription">
-											Clipped notes will be saved but will not open as a new tab. Obsidian will still be brought to the foreground.
-										</div>
-									</div>
-									<div class="setting-item-control">
-										<div class="checkbox-container">
-											<input type="checkbox" id="silent-open-toggle" />
-										</div>
-									</div>
-								</div>
-								<div class="setting-item mod-horizontal">
-									<div class="setting-item-info">
-										<label for="legacy-mode-toggle" data-i18n="legacyMode">Legacy&nbsp;mode</label>
-										<div class="setting-item-description" data-i18n="legacyModeDescription">
-											Uses the URI clipping method compatible with Obsidian 1.6.7 or earlier. Note that the length of the content you can clip is limited by your browser and OS. Some pages may fail without any errors.
-										</div>
-									</div>
-									<div class="setting-item-control">
-										<div class="checkbox-container">
-											<input type="checkbox" id="legacy-mode-toggle" />
-										</div>
 									</div>
 								</div>
 								<div class="setting-item mod-horizontal">
@@ -491,8 +465,6 @@
 										<option value="create" data-i18n="createNewNote">Create new note</option>
 										<option value="append-specific" data-i18n="appendToExisting">Add to an existing note, at the bottom</option>
 										<option value="prepend-specific" data-i18n="prependToExisting">Add to an existing note, at the top</option>
-										<option value="append-daily" data-i18n="appendToDaily">Add to daily note, at the bottom</option>
-										<option value="prepend-daily" data-i18n="prependToDaily">Add to daily note, at the top</option>
 										<option value="overwrite" data-i18n="overwriteNote">Overwrite note</option>
 									</select>
 								</div>

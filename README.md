@@ -1,106 +1,136 @@
-Obsidian Web Clipper helps you highlight and capture the web in your favorite browser. Anything you save is stored as durable Markdown files that you can read offline, and preserve for the long term.
+# Markdown Clipper
 
-- **[Download Web Clipper](https://obsidian.md/clipper)**
-- **[Documentation](https://help.obsidian.md/web-clipper)**
-- **[Troubleshooting](https://help.obsidian.md/web-clipper/troubleshoot)**
+A browser extension that captures web content as Markdown files and saves them directly to folders on your computer. Forked from [Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper).
 
-## Get started
+## Features
 
-Install the extension by downloading it from the official directory for your browser:
+- **Save to local folders** - Select any folder on your computer using the File System Access API
+- **Powerful templates** - Create custom templates with variables, filters, and triggers
+- **Smart content extraction** - Automatically extracts article content, metadata, and highlights
+- **94+ filters** - Transform content with text manipulation, date formatting, and more
+- **URL-based triggers** - Automatically apply templates based on URL patterns or schemas
 
-- **[Chrome Web Store](https://chromewebstore.google.com/detail/obsidian-web-clipper/cnjifjpddelmedmihgijeibhnjfabmlf)** for Chrome, Brave, Arc, Orion, and other Chromium-based browsers.
-- **[Firefox Add-Ons](https://addons.mozilla.org/en-US/firefox/addon/web-clipper-obsidian/)** for Firefox and Firefox Mobile.
-- **[Safari Extensions](https://apps.apple.com/us/app/obsidian-web-clipper/id6720708363)** for macOS, iOS, and iPadOS.
-- **[Edge Add-Ons](https://microsoftedge.microsoft.com/addons/detail/obsidian-web-clipper/eigdjhmgnaaeaonimdklocfekkaanfme)** for Microsoft Edge.
+## Browser Support
 
-## Use the extension
+**Chrome and Edge only** - This extension uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API) which is currently only supported in Chromium-based browsers.
 
-Documentation is available on the [Obsidian Help site](https://help.obsidian.md/web-clipper), which covers how to use [highlighting](https://help.obsidian.md/web-clipper/highlight), [templates](https://help.obsidian.md/web-clipper/templates), [variables](https://help.obsidian.md/web-clipper/variables), [filters](https://help.obsidian.md/web-clipper/filters), and more.
+## Installation
 
-## Contribute
+### From source
 
-### Translations
+1. Clone this repository
+2. Run `npm install` to install dependencies
+3. Run `npm run build:chrome` to build the extension
+4. Open Chrome and navigate to `chrome://extensions`
+5. Enable **Developer mode**
+6. Click **Load unpacked** and select the `dist` directory
 
-You can help translate Web Clipper into your language. Submit your translation via pull request using the format found in the [/_locales](/src/_locales) folder.
+## Usage
 
-### Features and bug fixes
+### Configure a save folder
 
-See the [help wanted](https://github.com/obsidianmd/obsidian-clipper/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) tag for issues where contributions are welcome.
+1. Click the extension icon and go to **Settings** (gear icon)
+2. In the **Save folders** section, click **Add folder**
+3. Select a folder on your computer where you want to save clipped content
+4. Grant permission when prompted - the extension will remember this folder
 
-## Roadmap
+### Clip a webpage
 
-In no particular order:
+1. Navigate to any webpage you want to save
+2. Click the extension icon
+3. Optionally highlight text on the page before clipping
+4. Select a template and destination folder
+5. Click **Save** to save the markdown file
 
-- [ ] A separate icon for Web Clipper
-- [ ] Translate UI into more languages — help is welcomed
-- [ ] Annotate highlights
-- [ ] Template directory
-- [ ] Template validation
-- [x] Template logic (if/for)
-- [x] Save images locally, [added in Obsidian 1.8.0](https://obsidian.md/changelog/2024-12-18-desktop-v1.8.0/)
+### Templates
 
-## Developers
+Templates control how content is captured and formatted. Each template includes:
 
-To build the extension:
+- **Note name** - The filename format (e.g., `{{title}}`)
+- **Path** - Subfolder within your save folder (e.g., `articles/{{date}}`)
+- **Properties** - YAML frontmatter fields
+- **Note content** - The markdown body with variables
 
-```
-npm run build
-```
+#### Variables
 
-This will create three directories:
-- `dist/` for the Chromium version
-- `dist_firefox/` for the Firefox version
-- `dist_safari/` for the Safari version
+Use double curly braces to insert dynamic content:
 
-### Install the extension locally
+- `{{title}}` - Page title
+- `{{url}}` - Page URL
+- `{{content}}` - Extracted article content
+- `{{highlights}}` - Selected/highlighted text
+- `{{author}}` - Article author
+- `{{date}}` - Current date
+- `{{published}}` - Article publish date
+- And many more...
 
-For Chromium browsers, such as Chrome, Brave, Edge, and Arc:
+#### Filters
 
-1. Open your browser and navigate to `chrome://extensions`
-2. Enable **Developer mode**
-3. Click **Load unpacked** and select the `dist` directory
-
-For Firefox:
-
-1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on**
-3. Navigate to the `dist_firefox` directory and select the `manifest.json` file
-
-If you want to run the extension permanently you can do so with the Nightly or Developer versions of Firefox.
-
-1. Type `about:config` in the URL bar
-2. In the Search box type `xpinstall.signatures.required`
-3. Double-click the preference, or right-click and select "Toggle", to set it to `false`.
-4. Go to `about:addons` > gear icon > **Install Add-on From File…**
-
-For iOS Simulator testing on macOS:
-
-1. Run `npm run build` to build the extension
-2. Open `xcode/Obsidian Web Clipper/Obsidian Web Clipper.xcodeproj` in Xcode
-3. Select the **Obsidian Web Clipper (iOS)** scheme from the scheme selector
-4. Choose an iOS Simulator device and click **Run** to build and launch the app
-5. Once the app is running on the simulator, open **Safari**
-6. Navigate to a webpage and tap the **Extensions** button in Safari to access the Web Clipper extension
-
-### Run tests
+Transform variables with filters using the pipe syntax:
 
 ```
+{{title|lowercase}}
+{{content|markdown}}
+{{date|date:"YYYY-MM-DD"}}
+{{title|replace:"old":"new"}}
+```
+
+#### Triggers
+
+Automatically apply templates based on:
+
+- **URL match** - Simple text matching (e.g., `youtube.com`)
+- **URL regex** - Regular expression patterns
+- **Schema** - Structured data types (e.g., `Article`, `Recipe`)
+
+## Build Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Build for Chrome
+npm run build:chrome
+
+# Run tests
 npm test
-```
 
-Or run in watch mode during development:
-
-```
+# Run tests in watch mode
 npm run test:watch
 ```
 
-## Third-party libraries
+## Project Structure
 
-- [webextension-polyfill](https://github.com/mozilla/webextension-polyfill) for browser compatibility
-- [defuddle](https://github.com/kepano/defuddle) for content extraction
-- [turndown](https://github.com/mixmark-io/turndown) for HTML to Markdown conversion
-- [dayjs](https://github.com/iamkun/dayjs) for date parsing and formatting
-- [lz-string](https://github.com/pieroxy/lz-string) to compress templates to reduce storage space
-- [lucide](https://github.com/lucide-icons/lucide) for icons
-- [mathml-to-latex](https://github.com/asnunes/mathml-to-latex) for MathML to LaTeX conversion
-- [dompurify](https://github.com/cure53/DOMPurify) for sanitizing HTML
+```
+src/
+├── core/           # Main extension logic (popup, settings)
+├── managers/       # Feature managers (templates, settings)
+├── utils/          # Utilities (markdown conversion, file saving)
+├── types/          # TypeScript type definitions
+├── icons/          # Extension icons
+└── _locales/       # Internationalization files
+```
+
+## Key Differences from Obsidian Web Clipper
+
+| Feature | Obsidian Web Clipper | Markdown Clipper |
+|---------|---------------------|------------------|
+| Save destination | Obsidian vaults via URI | Any local folder |
+| Browser support | Chrome, Firefox, Safari, Edge | Chrome, Edge only |
+| Daily notes | Supported | Not supported |
+| Obsidian URI | Required | Not used |
+
+## Third-party Libraries
+
+- [webextension-polyfill](https://github.com/mozilla/webextension-polyfill) - Browser compatibility
+- [defuddle](https://github.com/kepano/defuddle) - Content extraction
+- [turndown](https://github.com/mixmark-io/turndown) - HTML to Markdown conversion
+- [dayjs](https://github.com/iamkun/dayjs) - Date parsing and formatting
+- [lz-string](https://github.com/pieroxy/lz-string) - Template compression
+- [lucide](https://github.com/lucide-icons/lucide) - Icons
+- [mathml-to-latex](https://github.com/asnunes/mathml-to-latex) - MathML to LaTeX conversion
+- [dompurify](https://github.com/cure53/DOMPurify) - HTML sanitization
+
+## License
+
+This project is a fork of [Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper). See the original repository for license information.

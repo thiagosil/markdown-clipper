@@ -240,21 +240,21 @@ export function showTemplateEditor(template: Template | null): void {
 		});
 	}
 
-	const vaultSelect = document.getElementById('template-vault') as HTMLSelectElement;
-	if (vaultSelect) {
-		// Clear existing vault options
-		vaultSelect.textContent = '';
+	const folderSelect = document.getElementById('template-vault') as HTMLSelectElement;
+	if (folderSelect) {
+		// Clear existing folder options
+		folderSelect.textContent = '';
 		const lastUsedOption = document.createElement('option');
 		lastUsedOption.value = '';
 		lastUsedOption.textContent = getMessage('lastUsed');
-		vaultSelect.appendChild(lastUsedOption);
-		generalSettings.vaults.forEach(vault => {
+		folderSelect.appendChild(lastUsedOption);
+		generalSettings.folders.forEach(folder => {
 			const option = document.createElement('option');
-			option.value = vault;
-			option.textContent = vault;
-			vaultSelect.appendChild(option);
+			option.value = folder.name;
+			option.textContent = folder.name;
+			folderSelect.appendChild(option);
 		});
-		vaultSelect.value = editingTemplate.vault || '';
+		folderSelect.value = editingTemplate.folder || '';
 	}
 
 	updateUrl('templates', editingTemplate.id);
@@ -501,15 +501,13 @@ export function updateTemplateFromForm(): void {
 	const behaviorSelect = document.getElementById('template-behavior') as HTMLSelectElement;
 	if (behaviorSelect) template.behavior = behaviorSelect.value as Template['behavior'];
 
-	const isDailyNote = template.behavior === 'append-daily' || template.behavior === 'prepend-daily';
-
 	const pathInput = document.getElementById('template-path-name') as HTMLInputElement;
 	if (pathInput) template.path = pathInput.value;
 
 	const noteNameFormat = document.getElementById('note-name-format') as HTMLInputElement;
 	if (noteNameFormat) {
-		if (!isDailyNote && noteNameFormat.value.trim() === '') {
-			console.error('Note name format is required for non-daily note behaviors');
+		if (noteNameFormat.value.trim() === '') {
+			console.error('Note name format is required');
 			noteNameFormat.setCustomValidity(getMessage('noteNameRequired'));
 			noteNameFormat.reportValidity();
 			return;
@@ -541,8 +539,8 @@ export function updateTemplateFromForm(): void {
 	const triggersTextarea = document.getElementById('url-patterns') as HTMLTextAreaElement;
 	if (triggersTextarea) template.triggers = triggersTextarea.value.split('\n').filter(Boolean);
 
-	const vaultSelect = document.getElementById('template-vault') as HTMLSelectElement;
-	if (vaultSelect) template.vault = vaultSelect.value || undefined;
+	const folderSelect = document.getElementById('template-vault') as HTMLSelectElement;
+	if (folderSelect) template.folder = folderSelect.value || undefined;
 
 	hasUnsavedChanges = true;
 }

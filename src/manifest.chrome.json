@@ -1,10 +1,9 @@
 {
 	"manifest_version": 3,
 	"default_locale": "en",
-	"name": "Obsidian Web Clipper",
-	"homepage_url": "https://obsidian.md/",
-	"version": "0.12.0",
-	"description": "Save and highlight web pages in a private and durable format that you can access offline. The official extension for Obsidian.",
+	"name": "Markdown Clipper",
+	"version": "1.0.0",
+	"description": "Save and highlight web pages as Markdown files to any folder on your computer using the File System Access API.",
 	"permissions": [
 		"activeTab",
 		"clipboardWrite",

@@ -154,8 +154,8 @@ function handleVaultReorder(newIndex: number): void {
 	if (!draggedElement) return;
 	const oldIndex = parseInt(draggedElement.dataset.index || '-1');
 	if (oldIndex !== -1 && oldIndex !== newIndex) {
-		const [movedVault] = generalSettings.vaults.splice(oldIndex, 1);
-		generalSettings.vaults.splice(newIndex, 0, movedVault);
+		const [movedFolder] = generalSettings.folders.splice(oldIndex, 1);
+		generalSettings.folders.splice(newIndex, 0, movedFolder);
 		saveSettings();
 		updateVaultList();
 	}

@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-clipper",
-	"version": "0.12.0",
-	"description": "Official web clipper for Obsidian.",
+	"name": "markdown-clipper",
+	"version": "1.0.0",
+	"description": "Save web pages as Markdown files to any folder on your computer.",
 	"scripts": {
 		"defuddle-dev": "node scripts/set-defuddle-dev.js",
 		"defuddle-prod": "node scripts/set-defuddle-prod.js",
