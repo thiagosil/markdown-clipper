@@ -40,14 +40,15 @@ A browser extension that captures web content as Markdown files and saves them d
 2. Click the extension icon
 3. Optionally highlight text on the page before clipping
 4. Select a template and destination folder
-5. Click **Save** to save the markdown file
+5. Optionally enter a subfolder path (e.g., `articles` or `articles/2024`) - leave empty to save directly to the root folder
+6. Click **Save** to save the markdown file
 
 ### Templates
 
 Templates control how content is captured and formatted. Each template includes:
 
 - **Note name** - The filename format (e.g., `{{title}}`)
-- **Path** - Subfolder within your save folder (e.g., `articles/{{date}}`)
+- **Path** - Optional subfolder within your save folder (e.g., `articles/{{date}}`). Leave empty to save to the root. Supports variables for dynamic paths.
 - **Properties** - YAML frontmatter fields
 - **Note content** - The markdown body with variables
 

@@ -44,18 +44,10 @@ export function updateFolderList(): void {
 		dragHandle.appendChild(createElementWithHTML('i', '', { 'data-lucide': 'grip-vertical' }));
 		li.appendChild(dragHandle);
 
-		const folderInfo = createElementWithClass('div', 'folder-info');
 		const nameSpan = document.createElement('span');
 		nameSpan.className = 'folder-name';
 		nameSpan.textContent = folder.name;
-		folderInfo.appendChild(nameSpan);
-
-		const pathSpan = document.createElement('span');
-		pathSpan.className = 'folder-path';
-		pathSpan.textContent = folder.path;
-		folderInfo.appendChild(pathSpan);
-
-		li.appendChild(folderInfo);
+		li.appendChild(nameSpan);
 
 		const removeBtn = createElementWithClass('button', 'remove-vault-btn clickable-icon');
 		removeBtn.setAttribute('type', 'button');

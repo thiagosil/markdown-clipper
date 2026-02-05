@@ -146,7 +146,7 @@ export function showTemplateEditor(template: Template | null): void {
 			name: newTemplateName,
 			behavior: 'create',
 			noteNameFormat: '{{title}}',
-			path: 'Clippings',
+			path: '',
 			noteContentFormat: '{{content}}',
 			properties: [],
 			triggers: [],
@@ -554,7 +554,7 @@ function clearTemplateEditor(): void {
 	if (templateName) templateName.value = '';
 	if (templateProperties) templateProperties.textContent = '';
 	const pathInput = document.getElementById('template-path-name') as HTMLInputElement;
-	if (pathInput) pathInput.value = 'Clippings';
+	if (pathInput) pathInput.value = '';
 	const triggersTextarea = document.getElementById('url-patterns') as HTMLTextAreaElement;
 	if (triggersTextarea) triggersTextarea.value = '';
 	const templateEditor = document.getElementById('template-editor');
