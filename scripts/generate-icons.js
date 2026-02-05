@@ -9,11 +9,11 @@ const sizes = [16, 48, 128];
 const outputDir = path.join(__dirname, '..', 'src', 'icons');
 
 function drawMarkdownIcon(ctx, size) {
-	const padding = size * 0.1;
+	const padding = size * 0.02; // Minimal padding to fill more space
 	const innerSize = size - padding * 2;
 
 	// Background - rounded rectangle with blue gradient
-	const radius = size * 0.15;
+	const radius = size * 0.12;
 	ctx.fillStyle = '#3B82F6'; // Blue color
 
 	ctx.beginPath();
@@ -27,7 +27,7 @@ function drawMarkdownIcon(ctx, size) {
 
 	// For small icons, just draw M
 	if (size <= 16) {
-		ctx.font = `bold ${size * 0.6}px Arial, sans-serif`;
+		ctx.font = `bold ${size * 0.7}px Arial, sans-serif`;
 		ctx.fillText('M', size / 2, size / 2);
 		return;
 	}
@@ -37,13 +37,13 @@ function drawMarkdownIcon(ctx, size) {
 	const centerY = size / 2;
 
 	// Draw M
-	ctx.font = `bold ${size * 0.45}px Arial, sans-serif`;
+	ctx.font = `bold ${size * 0.52}px Arial, sans-serif`;
 	ctx.fillText('M', centerX, centerY - size * 0.08);
 
 	// Draw down arrow below M
-	const arrowY = centerY + size * 0.22;
-	const arrowWidth = size * 0.2;
-	const arrowHeight = size * 0.12;
+	const arrowY = centerY + size * 0.25;
+	const arrowWidth = size * 0.24;
+	const arrowHeight = size * 0.14;
 
 	ctx.beginPath();
 	ctx.moveTo(centerX - arrowWidth / 2, arrowY - arrowHeight / 2);
